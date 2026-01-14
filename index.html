@@ -1,6 +1,360 @@
-<!-- Example for the Spotify app -->
-<a href="https://youtube.com">Open Spotify App</a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <title>Classroom Helper</title>
+    <style>
+        /* 1. GLOBAL SETTINGS */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            overflow: hidden; 
+            touch-action: none; /* Critical for Game Performance */
+            -webkit-user-select: none;
+            user-select: none;
+        }
 
+        /* RESEARCH MODE ENABLED */
+        body.research-mode {
+            overflow: auto !important;
+            touch-action: auto !important;
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+        }
 
-<!-- Example for a custom app -->
-<a href="myapp://open">Open My Custom App</a>
+        /* 2. THE GAME CONTAINER */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh; 
+            /* GPU Acceleration Hack: Forces smooth rendering */
+            transform: translateZ(0); 
+            background-color: black;
+            z-index: 50;
+            overflow: hidden;
+        }
+
+        #game-frame {
+            display: block;
+            width: 100%;
+            height: 100%; 
+            border: none;
+            background-color: black;
+        }
+
+        /* 3. FAKE PAGE (The Research Iframe) */
+        #fake-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: white;
+            z-index: 10;
+            display: none;
+            border: none;
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* 4. WARNING BOX */
+        #warning-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #d93025;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            display: none;
+            z-index: 2147483647; 
+            pointer-events: none; 
+            margin-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* 5. TRIGGERS */
+        #settings-trigger {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 60px; /* Reduced size to prevent accidental hits */
+            height: 60px;
+            z-index: 99999;
+        }
+
+        /* --- SMART CORNER (BOTTOM LEFT) --- */
+        #smart-corner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100px;       
+            height: 100px;
+            z-index: 99999;
+            cursor: pointer;
+            touch-action: manipulation; 
+        }
+
+        /* 6. SETTINGS MENU */
+        #settings-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222; 
+            color: #fff;
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 12px;
+            width: 300px; 
+            text-align: center;
+            font-family: sans-serif;
+            z-index: 100000;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            max-height: 85vh; 
+            overflow-y: auto; 
+        }
+        input, select { width: 90%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #555; background-color: #333; color: white; border-radius: 6px; }
+        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; font-size: 14px; cursor: pointer;}
+        .btn-green { background: #1b5e20; color: white; }
+        .btn-blue { background: #0d47a1; color: white; }
+        .btn-red { background: #b71c1c; color: white; }
+        
+        .info-text {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 15px;
+            line-height: 1.5;
+            text-align: left;
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        label { display: block; text-align: left; color: #ccc; font-size: 12px; margin-bottom: 2px; }
+    </style>
+</head>
+<body>
+
+    <iframe id="fake-frame" src="https://www.wikipedia.org"></iframe>
+
+    <div id="game-container">
+        <iframe id="game-frame" 
+            src="https://bloxd.com" 
+            loading="eager"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen; gamepad"
+            allowfullscreen>
+        </iframe>
+    </div>
+
+    <div id="warning-box">⚠️ Teacher Approaching!</div>
+
+    <div id="settings-trigger" onclick="openSettings()"></div>
+    <div id="smart-corner"></div>
+
+    <div id="settings-modal">
+        <h3 style="margin-top:0;">Settings</h3>
+        <button class="btn btn-green" onclick="enterFullscreen()">Go Fullscreen</button>
+        <hr style="margin:15px 0; border: 0; border-top: 1px solid #444;">
+        
+        <label>Panic Action:</label>
+        <select id="panic-mode">
+            <option value="web">Open Fake Website</option>
+            <option value="app">Open Goodnotes App</option>
+        </select>
+
+        <label>Fake URL (for Web mode):</label>
+        <input type="text" id="fake-url" placeholder="https://www.wikipedia.org">
+        
+        <button class="btn btn-blue" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-red" onclick="closeSettings()">Close</button>
+
+        <div class="info-text"> 
+            <strong>Note:</strong> "Open App" will likely show a confirmation popup on iOS ("Open this page in Goodnotes?"). Web mode is stealthier.
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // Elements
+        const gameContainer = document.getElementById('game-container');
+        const gameFrame = document.getElementById('game-frame');
+        const fakeFrame = document.getElementById('fake-frame');
+        const warningBox = document.getElementById('warning-box');
+        const settingsModal = document.getElementById('settings-modal');
+        const urlInput = document.getElementById('fake-url');
+        const panicModeSelect = document.getElementById('panic-mode');
+        const smartCorner = document.getElementById('smart-corner');
+
+        const GAME_URL = "https://bloxd.com";
+
+        // --- 1. SMART CORNER LOGIC ---
+        let lastTapTime = 0;
+        
+        smartCorner.addEventListener('touchend', (e) => {
+            e.preventDefault(); 
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+
+            // CHECK MODE
+            if (document.body.classList.contains('research-mode')) {
+                // RESEARCH MODE: Single Tap -> Reload Game
+                openBack();
+            } 
+            else {
+                // GAME MODE: Double Tap -> Enter Fullscreen
+                if (tapLength < 400 && tapLength > 0) {
+                    enterFullscreen();
+                }
+            }
+            lastTapTime = currentTime;
+        });
+
+        // --- 2. GESTURE HANDLING (OPTIMIZED) ---
+        function handleGesture(e) {
+            if (!document.body.classList.contains('research-mode')) {
+                e.preventDefault();
+            }
+        }
+        document.addEventListener('gesturestart', handleGesture, { passive: false });
+        document.addEventListener('gesturechange', handleGesture, { passive: false }); 
+        document.addEventListener('gestureend', handleGesture, { passive: false });
+
+        // --- 3. FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyACnC5jlmAzfAFikwAxLgIKpf5lWn7r4_k",
+            authDomain: "save-4cb6e.firebaseapp.com",
+            databaseURL: "https://save-4cb6e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "save-4cb6e",
+            storageBucket: "save-4cb6e.firebasestorage.app",
+            messagingSenderId: "881357903306",
+            appId: "1:881357903306:web:f930af59d6cd26f6dd2b33",
+            measurementId: "G-FN3FL303N4"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 4. FUNCTIONS ---
+        
+        // Initialize from Storage
+        const savedUrl = localStorage.getItem('myFakeUrl');
+        if (savedUrl) fakeFrame.src = savedUrl;
+
+        function enterFullscreen() {
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            }
+            closeSettings();
+        }
+
+        function openSettings() {
+            // Load URL
+            urlInput.value = localStorage.getItem('myFakeUrl') || "https://www.wikipedia.org";
+            // Load Mode
+            panicModeSelect.value = localStorage.getItem('panicMode') || "web";
+            settingsModal.style.display = 'block';
+        }
+        function closeSettings() { settingsModal.style.display = 'none'; }
+        
+        function saveSettings() {
+            // Save URL
+            let val = urlInput.value;
+            if(!val.startsWith('http')) val = 'https://' + val;
+            fakeFrame.src = val;
+            localStorage.setItem('myFakeUrl', val);
+
+            // Save Mode
+            const mode = panicModeSelect.value;
+            localStorage.setItem('panicMode', mode);
+
+            closeSettings();
+        }
+
+        db.ref('command').on('value', (snapshot) => {
+            const cmd = snapshot.val();
+            if (cmd === 'warn') {
+                showWarning();
+            } else if (cmd === 'close') {
+                enableStealthMode();
+            }
+        });
+
+        function showWarning() {
+            warningBox.style.display = 'block';
+            setTimeout(() => { warningBox.style.display = 'none'; }, 5000);
+        }
+
+        // --- SWITCHING LOGIC ---
+
+        function enableStealthMode() {
+            const mode = localStorage.getItem('panicMode') || 'web';
+
+            // IF APP MODE SELECTED
+            if (mode === 'app') {
+                // Kill Game Source (Stops Audio)
+                gameFrame.src = "about:blank";
+                
+                // Hide container
+                gameContainer.style.display = 'none';
+                document.body.classList.add('research-mode');
+                
+                // Attempt to launch Goodnotes
+                window.location.href = "goodnotes://"; 
+                return;
+            }
+
+            // IF WEB MODE SELECTED (Default)
+            
+            // 1. Exit Fullscreen if active
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+
+            // 2. Hide Game Container
+            gameContainer.style.display = 'none';
+            document.body.classList.add('research-mode');
+
+            // 3. QUIT BLOXD (Clear Source)
+            gameFrame.src = "about:blank";
+
+            // 4. Show Fake Frame
+            fakeFrame.style.display = 'block';
+            document.title = "Research";
+        }
+
+        function openBack() {
+            // 1. Hide Fake Frame
+            fakeFrame.style.display = 'none';
+            document.body.classList.remove('research-mode');
+
+            // 2. RELOAD BLOXD (Restore Source)
+            gameFrame.src = GAME_URL;
+
+            // 3. Show Game Container
+            gameContainer.style.display = 'block';
+            document.title = "Classroom Helper";
+        }
+    </script>
+</body>
+</html>
