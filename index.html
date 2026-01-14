@@ -161,7 +161,7 @@
         </iframe>
     </div>
 
-    <div id="warning-box">⚠️ Ada Cuming!</div>
+    <div id="warning-box">⚠️ Teacher Approaching!</div>
 
     <div id="settings-trigger" onclick="openSettings()"></div>
     <div id="smart-corner"></div>
@@ -184,7 +184,7 @@
         <button class="btn btn-red" onclick="closeSettings()">Close</button>
 
         <div class="info-text"> 
-            <strong>Note:</strong> "Open App" will likely show a confirmation popup on iOS ("Open this page in Goodnotes?"). Web mode is stealthier.
+            <strong>Note:</strong> iOS may block opening apps automatically. If Goodnotes fails to open, switch back to "Fake Website" mode.
         </div>
     </div>
 
@@ -309,21 +309,29 @@
         function enableStealthMode() {
             const mode = localStorage.getItem('panicMode') || 'web';
 
-            // IF APP MODE SELECTED
+            // OPTION A: OPEN APP (Goodnotes)
             if (mode === 'app') {
-                // Kill Game Source (Stops Audio)
+                // 1. Kill Game Source (Stops Audio immediately)
                 gameFrame.src = "about:blank";
                 
-                // Hide container
+                // 2. Hide container so screen is blank while processing
                 gameContainer.style.display = 'none';
                 document.body.classList.add('research-mode');
                 
-                // Attempt to launch Goodnotes
-                window.location.href = "goodnotes://"; 
+                // 3. Attempt to launch Goodnotes via Link Click (Better for bypassing blockers)
+                const link = document.createElement('a');
+                // Try Goodnotes 5/6 universal link scheme
+                link.href = "goodnotes://"; 
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                // Cleanup
+                setTimeout(() => { document.body.removeChild(link); }, 100);
                 return;
             }
 
-            // IF WEB MODE SELECTED (Default)
+            // OPTION B: OPEN FAKE WEBSITE (Default)
             
             // 1. Exit Fullscreen if active
             if (document.fullscreenElement || document.webkitFullscreenElement) {
